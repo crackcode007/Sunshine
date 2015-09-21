@@ -1,5 +1,6 @@
 package com.sunshine.manishraikwar.sunshine;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -22,13 +23,13 @@ import java.util.List;
 
 public class ForecastFragment extends Fragment {
 
-        private ArrayAdapter<String> mForecastAdapter;
+        private ArrayAdapter<String> forecastAdapter;
 
         public ForecastFragment(){}
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
-            View rootView =inflater.inflate(R.layout.fragment_main, container, false);
+
 
             String[] forecastArray = {
                     "Today -  Sunny - 88/63",
@@ -42,75 +43,78 @@ public class ForecastFragment extends Fragment {
             };
             List<String> weekForecast = new ArrayList<String>(Arrays.asList(forecastArray));
 
-            mForecastAdapter =
-                    new ArrayAdapter<String>(getActivity(),
+           ArrayAdapter<String> forecastAdapter =
+                    new ArrayAdapter<String>
+                            (getActivity(),
                             R.layout.list_item_forecast,
                             R.id.list_item_forecast_textview, weekForecast);
+            View rootView =inflater.inflate(R.layout.fragment_main, container, false);
+
             ListView listView =(ListView) rootView.findViewById(R.id.listview_forecast);
-            listView.setAdapter(mForecastAdapter);
-            HttpURLConnection urlConnection =null;
+            listView.setAdapter(forecastAdapter);
+
+
+        return rootView;
+        }
+    public class FetchWeatherTask extends AsyncTask<Void,Void,Void>{
+        private final String LOG_TAG =FetchWeatherTask.class.getSimpleName();
+        @Override
+                protected Void doInBackground(Void...params) {
+            HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
-            //will contsin the raw JSON response as a string.
+            //will contains the raw JSON response as a string.
             String forecastJsonStr = null;
-            try{
-             // construct the url for the OpenWeatherMap query
+            try {
+                // construct the url for the OpenWeatherMap query
                 //Possible parameter are available at OWM's forecast API page,at
                 //http:openweathermap.org/API#forecast
 
                 URL url = new URL("http://api.openweathermap.org/data/2.5/forecast/daily?q=94043&mode=json&units=metric&cnt=7");
-            //create the request to OpenweatherMap , and open the connection
-            urlConnection = (HttpURLConnection) url.openConnection();
-            urlConnection.setRequestMethod("GET");
-            urlConnection.connect();
-            //read the input stream into a String
+                //create the request to OpenweatherMap , and open the connection
+                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setRequestMethod("GET");
+                urlConnection.connect();
+                //read the input stream into a String
 
-            InputStream inputStream = urlConnection.getInputStream();
-            StringBuffer buffer = new StringBuffer();
-            if (inputStream == null)
-            { // Nothing to do.
-               forecastJsonStr = null;
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+                if (inputStream == null) { // Nothing to do.
+                    return null;
+                }
+                reader = new BufferedReader(new InputStreamReader(inputStream));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    //Since its JSON. adding a newline isn't necessary(it won't affect parsing)
+                    // But it does make debugging a *lot* easier if you print out the completed
+                    // buffer for debugging.
+                    buffer.append(line + "\n");
+
+                }
+                if (buffer.length() == 0) {
+                    //String was empty. No point in parsing.
+
+                    return null;
+                }
+                forecastJsonStr = buffer.toString();
+            } catch (IOException e) {
+                Log.e("PlaceholderFragment", "Error", e);
+                //if the code didn't succesfully get the weather data, there's no point in attemping
+                // to parse it.
+                return null;
+
+            } finally {
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+
+
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (final IOException e) {
+                        Log.e(LOG_TAG, "Error closing stream", e);
+                    }
+                }
             }
-        reader = new BufferedReader(new InputStreamReader(inputStream));
-    String line;
-    while((line =reader.readLine())!=null)
-        {
-        //Since its JSON. adding a newline isn't necessary(it won't affect parsing)
-        // But it does make debugging a *lot* easier if you print out the completed
-        // buffer for debugging.
-    buffer.append(line +"\n");
-
-        }
-    if(buffer.length() == 0) {
-        //String was empty. No point in parsing.
-
-        forecastJsonStr = null;
-        }
-        forecastJsonStr =buffer.toString();
-    }
-    catch(IOException e)
-    {
-        Log.e("PlaceholderFragment","Error",e);
-        //if the code didn't succesfully get the weather data, there's no point in attemping
-        // to parse it.
-          forecastJsonStr = null;
-
-        } finally
-    {
-        if (urlConnection != null)
-        {
-            urlConnection.disconnect();
-        }
-
-
-    if (reader !=null) {
-        try {
-            reader.close();
-        }
-        catch (final IOException e)
-        {
-            Log.e("PlaceholderFragment", "Error closing stream", e);
-        }
+       return null; }
     }}
-        return rootView;
-        }
-        }
